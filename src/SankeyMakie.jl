@@ -94,6 +94,8 @@ function Makie.plot!(s::Sankey)
 
                     sankey_y = Float64[]
                     x_start = x[i] + wbox
+                    xvals = [x_start]
+                    yvals = [y_src]
                     k = j
                     l = i
                     while mask[k]
@@ -106,19 +108,23 @@ function Makie.plot!(s::Sankey)
                         append!(sankey_y, y_coords)
 
                         x_start = x[k] + 0.01
+                        push!(xvals, x_start)
                         y_src = y_dst
+                        push!(yvals, y_src)
                         l = k
                         k = findfirst(==(first(outneighbors(g, k))), vertices(g))
                     end
+                    push!(xvals, x[k]-wbox)
 
                     y_dst = y[k] + vw[k] / (2m) - dst_offsets[k, l]
+                    push!(yvals, y_dst)
                     x_coords = range(0, 1, length=3)
                     # x_coords = range(0, 1, length=length(x_start:0.01:x[k]-wbox))
                     y_coords = remap(1 ./ (1 .+ exp.(6 .* (1 .- 2 .* x_coords))), y_src, y_dst)
                     append!(sankey_y, y_coords)
                     sankey_x = range(x[i]+wbox, x[k]-wbox, length = length(sankey_y))
 
-                    pol = linkpoly(scene, x_start, x[k]-wbox, y_src-h_edge, y_dst-h_edge, 2h_edge)
+                    pol = linkpoly(scene, xvals, yvals .- h_edge, 2h_edge)
 
                     poly!(s, pol, color = (:black, 0.1), space = :pixel)
                     # band!(s, sankey_x, sankey_y.-2h_edge, sankey_y, color = (:black, 0.1))
@@ -368,43 +374,61 @@ function make_compact(x, y, w)
     return y
 end
 
-function linkpoly(scene, x0, x1, y0, y1, lwidth)
+function linkpoly(scene, xs, ys, lwidth)
+    n = 30
+
     lift(scene.camera.projectionview, scene.px_area) do _, _
-        corners = Makie.scene_to_screen(
-            Point2f[
-                (x0, y0 - lwidth/2),
-                (x1, y1 - lwidth/2),
-                (x1, y1 + lwidth/2),
-                (x0, y0 + lwidth/2),
-            ],
-            scene
-        )
 
-        start = 0.5 * (corners[1] + corners[4])
-        stop =  0.5 * (corners[2] + corners[3])
-        thickness = corners[4][2] - corners[1][2]
-        width = stop[1] - start[1]
-        height = stop[2] - start[2]
+        nparts = length(xs)-1
+        # points = Vector{Point2f}(undef, 2 * n * nparts)
+        points = fill(Point2f(1, 1), 2 * n * nparts)
 
-        n = 30
+        for (ipart, (x0, x1, y0, y1)) in enumerate(zip(
+                @view(xs[1:end-1]),
+                @view(xs[2:end]),
+                @view(ys[1:end-1]),
+                @view(ys[2:end]),
+            ))
 
-        x0pix = start[1]
-        x1pix = stop[1]
+            corners = Makie.scene_to_screen(
+                Point2f[
+                    (x0, y0 - lwidth/2),
+                    (x1, y1 - lwidth/2),
+                    (x1, y1 + lwidth/2),
+                    (x0, y0 + lwidth/2),
+                ],
+                scene
+            )
 
-        points = Vector{Point2f}(undef, n * 2)
-        for (i, x) in enumerate(range(x0pix, x1pix, length = n))
+            start = 0.5 * (corners[1] + corners[4])
+            stop =  0.5 * (corners[2] + corners[3])
+            thickness = corners[4][2] - corners[1][2]
+            width = stop[1] - start[1]
+            height = stop[2] - start[2]
 
-            y = height * (1 - cos(pi * (x - x0pix) / width)) / 2 + start[2]
-            deriv = pi * height * sin((pi * (x - x0pix)) / width) / (2 * width)
 
-            xortho = sqrt(1 / (1 + deriv^2))
-            yortho = xortho * deriv
+            x0pix = start[1]
+            x1pix = stop[1]
 
-            ortho = Point2f(-yortho, xortho)
-            _xy = Point2f(x, y)
+            for (i, x) in enumerate(range(x0pix, x1pix, length = n))
 
-            points[i] = _xy - ortho * thickness/2
-            points[2n - i + 1] = _xy + ortho * thickness/2
+                y = height * (1 - cos(pi * (x - x0pix) / width)) / 2 + start[2]
+                deriv = pi * height * sin((pi * (x - x0pix)) / width) / (2 * width)
+
+                xortho = sqrt(1 / (1 + deriv^2))
+                yortho = xortho * deriv
+
+                ortho = Point2f(-yortho, xortho)
+                _xy = Point2f(x, y)
+
+                if nparts > 1
+                    points[i + (ipart-1) * n] = _xy - ortho * thickness/2
+                    points[end - (ipart-1) * n - i + 1] = _xy + ortho * thickness/2
+                else
+                    points[i + (ipart-1) * n] = _xy - ortho * thickness/2
+                    points[end - (ipart-1) * n - i + 1] = _xy + ortho * thickness/2
+                end
+            end
         end
 
         Makie.Polygon(points)

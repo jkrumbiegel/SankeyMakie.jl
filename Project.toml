@@ -1,0 +1,17 @@
+name = "SankeyMakie"
+uuid = "1323c716-dab9-4207-0457-9cc5295a221b"
+authors = ["Julius Krumbiegel"]
+version = "0.1.0"
+
+[deps]
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+LayeredLayouts = "f4a74d36-062a-4d48-97cd-1356bad1de4e"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+MetaGraphs = "626554b9-1ddb-594c-aa3c-2596fe9399a5"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[compat]
+Graphs = "1.5"
+LayeredLayouts = "0.2.4"
+MetaGraphs = "0.7"
+julia = "1.5"

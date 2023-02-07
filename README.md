@@ -5,6 +5,8 @@ A Makie port of [https://github.com/daschw/SankeyPlots.jl](https://github.com/da
 ```julia
 using SankeyMakie
 using CairoMakie
+using Random
+Random.seed!(123)
 
 connections = [
     (1, 2, 1100),
@@ -43,10 +45,8 @@ labels = [
 
 f, ax, s = sankey(connections,
     nodelabels = labels,
-    compact = true,
     nodecolor = rand(RGBf, length(labels)),
     linkcolor = SankeyMakie.TargetColor(0.2),
-    axis = (type = Axis,),
     figure = (; resolution = (1000, 500)))
 hidedecorations!(ax)
 hidespines!(ax)

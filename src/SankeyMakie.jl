@@ -28,8 +28,12 @@ export sankey, sankey!
 
 @recipe(Sankey) do scene
     Attributes(
-        label_position=:inside,
+        labelposition=:inside,
         compact = true,
+        fontsize = theme(scene, :fontsize),
+        nodelabels = nothing,
+        nodecolor = :gray30,
+        linkcolor = (:pink, 0.2),
     )
 end
 #     node_labels=nothing,
@@ -43,8 +47,9 @@ end
 # )
 
 function Makie.plot!(s::Sankey)
-    g, node_labels = sankey_graph(s[1][])
-    # names = sankey_names(g, node_labels)
+    g = sankey_graph(s[1][])
+    linkindexdict = Dict(tuple.(first.(s[1][]), last.(s[1][])) .=> eachindex(s[1][]))
+    labels = sankey_names(g, s.nodelabels[])
     # if node_colors === nothing
     #     node_colors = palette(get(plotattributes, :color_palette, :default))
     # end
@@ -69,9 +74,6 @@ function Makie.plot!(s::Sankey)
 
     heights = vw ./ 2m
 
-    # errorbars!(s, x, y, heights)
-    text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text = node_labels, align = (:center, :top))
-
     # if label_position ∉ (:inside, :left, :right, :top, :bottom, :node, :legend)
     #     error("label_position :$label_position not supported")
     # elseif label_position !== :legend
@@ -84,7 +86,7 @@ function Makie.plot!(s::Sankey)
         h = heights[i]
 
         if !(mask[i])
-            poly!(s, BBox(x[i]-wbox, x[i]+wbox, y[i]-h, y[i]+h))
+            poly!(s, BBox(x[i]-wbox, x[i]+wbox, y[i]-h, y[i]+h), color = get_node_color(s.nodecolor[], i))
 
             for (j, w) in enumerate(vertices(g))
                 if has_edge(g, v, w)
@@ -126,7 +128,7 @@ function Makie.plot!(s::Sankey)
 
                     pol = linkpoly(scene, xvals, yvals .- h_edge, 2h_edge)
 
-                    poly!(s, pol, color = (:black, 0.1), space = :pixel)
+                    poly!(s, pol, color = get_link_color(s.linkcolor[], i, j, linkindexdict[(i, j)], s.nodecolor[]), space = :pixel)
                     # band!(s, sankey_x, sankey_y.-2h_edge, sankey_y, color = (:black, 0.1))
 
     #                 missing_keys = Tuple{Int64, Int64}[]
@@ -195,6 +197,8 @@ function Makie.plot!(s::Sankey)
         end
     end
 
+    text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text = labels, align = (:center, :top))
+
     # if label_position !== :legend
     #     @series begin
     #         primary := :false
@@ -224,7 +228,6 @@ function Makie.plot!(s::Sankey)
     return s
 end
 
-"Function to add a weighted edge"
 function add_weighted_edge!(g, src, dst, weight)
     new_edge = Edge(src, dst)
     add_edge!(g, new_edge)
@@ -232,9 +235,6 @@ function add_weighted_edge!(g, src, dst, weight)
     return g
 end
 
-"""
-Function to create a MetaGraphs from source nodes (src), destination nodes (dst) and weights (w)
-"""
 function sankey_graph(src::Vector, dst::Vector, w)
     # get list of unique nodes
     unique_nodes = sort(unique([src; dst]))
@@ -262,12 +262,29 @@ function sankey_graph(src::Vector, dst::Vector, w)
         add_weighted_edge!(g, src[i], dst[i], w[i])
     end
 
-    return g, unique_nodes
+    return g
 end
 sankey_graph(g::AbstractMetaGraph) = copy(g)
-function sankey_graph(v::Vector{<:Tuple{AbstractString,Real,AbstractString}})
+function sankey_graph(v::Vector{<:Tuple{Int,Real,Int}})
     sankey_graph(getindex.(v, 1), getindex.(v, 3), getindex.(v, 2))
 end
+
+get_node_color(s::Symbol, i) = s
+get_node_color(v::AbstractVector{<:Makie.Colors.Colorant}, i) = v[i]
+
+get_link_color(v::AbstractVector{<:Makie.Colors.Colorant}, i, j, k) = v[k]
+get_link_color(x, i, j, k) = x
+get_link_color(x, i, j, k, nodecolor) = get_link_color(x, i, j, k)
+
+struct SourceColor
+    alpha::Float64
+end
+struct TargetColor
+    alpha::Float64
+end
+
+get_link_color(t::TargetColor, i, j, k, nodecolor) = (get_node_color(nodecolor, j), t.alpha)
+get_link_color(t::SourceColor, i, j, k, nodecolor) = (get_node_color(nodecolor, i), t.alpha)
 
 
 sankey_names(g, names) = names

@@ -48,7 +48,7 @@ end
 
 function Makie.plot!(s::Sankey)
     g = sankey_graph(s[1][])
-    linkindexdict = Dict(tuple.(first.(s[1][]), last.(s[1][])) .=> eachindex(s[1][]))
+    linkindexdict = Dict(tuple.(first.(s[1][]), getindex.(s[1][], 2)) .=> eachindex(s[1][]))
     labels = sankey_names(g, s.nodelabels[])
     # if node_colors === nothing
     #     node_colors = palette(get(plotattributes, :color_palette, :default))
@@ -265,8 +265,8 @@ function sankey_graph(src::Vector, dst::Vector, w)
     return g
 end
 sankey_graph(g::AbstractMetaGraph) = copy(g)
-function sankey_graph(v::Vector{<:Tuple{Int,Real,Int}})
-    sankey_graph(getindex.(v, 1), getindex.(v, 3), getindex.(v, 2))
+function sankey_graph(v::Vector{<:Tuple{Int,Int,Real}})
+    sankey_graph(getindex.(v, 1), getindex.(v, 2), getindex.(v, 3))
 end
 
 get_node_color(s::Symbol, i) = s

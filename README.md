@@ -43,15 +43,22 @@ labels = [
     "Groceries",
 ]
 
-f, ax, s = sankey(connections,
+
+fig, ax, plt = sankey(
+    connections,
     nodelabels = labels,
     nodecolor = rand(RGBf, length(labels)),
     linkcolor = SankeyMakie.TargetColor(0.2),
-    figure = (; resolution = (1000, 500)))
+    fontsize = 20,
+    forceorder = [6 => 1], # Salary 2 before Salary
+    reverseorder = true, # Reverse order within each layer
+    figure = (; size = (1000, 500)),
+)
+
 hidedecorations!(ax)
 hidespines!(ax)
 
-save("sankey.svg", f)
+save("sankey.svg", fig)
 ```
 
 ![sankey example](sankey.svg)

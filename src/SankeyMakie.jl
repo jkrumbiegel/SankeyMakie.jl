@@ -318,7 +318,7 @@ function sankey_layout!(g, forcelayer, forceorder, reverseorder)
     if !isempty(forceorder)
         reorder_nodes!(ys, xs, mask, forceorder)
     end
-
+    
     if reverseorder
         layers = nodes_by_layers(xs, mask)
         reverse_nodes!(ys, layers)

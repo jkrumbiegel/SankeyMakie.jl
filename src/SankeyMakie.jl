@@ -29,11 +29,13 @@ export sankey, sankey!
 @recipe(Sankey) do scene
     Attributes(
         labelposition=:inside,
-        compact = true,
-        fontsize = theme(scene, :fontsize),
-        nodelabels = nothing,
-        nodecolor = :gray30,
-        linkcolor = (:pink, 0.2),
+        compact=true,
+        fontsize=theme(scene, :fontsize),
+        nodelabels=nothing,
+        nodecolor=:gray30,
+        linkcolor=(:pink, 0.2),
+        forceorder=Pair{Int,Int}[],
+        forcelayer=Pair{Int,Int}[],
     )
 end
 #     node_labels=nothing,
@@ -57,9 +59,7 @@ function Makie.plot!(s::Sankey)
     scene = Makie.parent_scene(s)
     wbox = 0.03
 
-    force_layer = Pair{Int,Int}[]
-    force_order = Pair{Int,Int}[]
-    x, y, mask = sankey_layout!(g, force_layer, force_order)
+    x, y, mask = sankey_layout!(g, s.forcelayer[], s.forceorder[])
     perm = sortperm(y, rev=true)
 
     vw = vertex_weight.(Ref(g), vertices(g))
@@ -86,7 +86,7 @@ function Makie.plot!(s::Sankey)
         h = heights[i]
 
         if !(mask[i])
-            poly!(s, BBox(x[i]-wbox, x[i]+wbox, y[i]-h, y[i]+h), color = get_node_color(s.nodecolor[], i))
+            poly!(s, BBox(x[i] - wbox, x[i] + wbox, y[i] - h, y[i] + h), color=get_node_color(s.nodecolor[], i))
 
             for (j, w) in enumerate(vertices(g))
                 if has_edge(g, v, w)
@@ -116,7 +116,7 @@ function Makie.plot!(s::Sankey)
                         l = k
                         k = findfirst(==(first(outneighbors(g, k))), vertices(g))
                     end
-                    push!(xvals, x[k]-wbox)
+                    push!(xvals, x[k] - wbox)
 
                     y_dst = y[k] + vw[k] / (2m) - dst_offsets[k, l]
                     push!(yvals, y_dst)
@@ -124,80 +124,80 @@ function Makie.plot!(s::Sankey)
                     # x_coords = range(0, 1, length=length(x_start:0.01:x[k]-wbox))
                     y_coords = remap(1 ./ (1 .+ exp.(6 .* (1 .- 2 .* x_coords))), y_src, y_dst)
                     append!(sankey_y, y_coords)
-                    sankey_x = range(x[i]+wbox, x[k]-wbox, length = length(sankey_y))
+                    sankey_x = range(x[i] + wbox, x[k] - wbox, length=length(sankey_y))
 
                     pol = linkpoly(s, scene, xvals, yvals .- h_edge, 2h_edge)
 
-                    poly!(s, pol, color = get_link_color(s.linkcolor[], i, j, linkindexdict[(i, j)], s.nodecolor[]), space = :pixel)
+                    poly!(s, pol, color=get_link_color(s.linkcolor[], i, j, linkindexdict[(i, j)], s.nodecolor[]), space=:pixel)
                     # band!(s, sankey_x, sankey_y.-2h_edge, sankey_y, color = (:black, 0.1))
 
-    #                 missing_keys = Tuple{Int64, Int64}[]
-    #                 @series begin
-    #                     seriestype := :path
-    #                     primary := false
-    #                     linecolor := nothing
-    #                     linewidth := false
-    #                     fillrange := sankey_y .- 2h_edge
-    #                     fillalpha --> 0.5
-    #                     if edge_color === :gradient
-    #                         fillcolor := getindex(
-    #                             cgrad(node_colors[mod1.([i, k], end)]),
-    #                             range(0, 1, length=length(sankey_x)),
-    #                         )
-    #                     elseif edge_color === :src
-    #                         fillcolor := node_colors[mod1(i, end)]
-    #                     elseif edge_color === :dst
-    #                         fillcolor := node_colors[mod1(k, end)]
-    #                     elseif typeof(edge_color) <: AbstractDict{Tuple{Int, Int}}
-    #                         if haskey(edge_color, (i, k))
-    #                             fillcolor := edge_color[(i, k)]
-    #                         else
-    #                             push!(missing_keys, (i, k))
-    #                             fillcolor := :gray
-    #                         end
-    #                     else
-    #                         fillcolor := edge_color
-    #                     end
-    #                     sankey_x, sankey_y
-    #                 end
-    #                 isempty(missing_keys) || @warn "The following missing keys in the edge_color dictionary defaulted to gray" missing_keys
+                    #                 missing_keys = Tuple{Int64, Int64}[]
+                    #                 @series begin
+                    #                     seriestype := :path
+                    #                     primary := false
+                    #                     linecolor := nothing
+                    #                     linewidth := false
+                    #                     fillrange := sankey_y .- 2h_edge
+                    #                     fillalpha --> 0.5
+                    #                     if edge_color === :gradient
+                    #                         fillcolor := getindex(
+                    #                             cgrad(node_colors[mod1.([i, k], end)]),
+                    #                             range(0, 1, length=length(sankey_x)),
+                    #                         )
+                    #                     elseif edge_color === :src
+                    #                         fillcolor := node_colors[mod1(i, end)]
+                    #                     elseif edge_color === :dst
+                    #                         fillcolor := node_colors[mod1(k, end)]
+                    #                     elseif typeof(edge_color) <: AbstractDict{Tuple{Int, Int}}
+                    #                         if haskey(edge_color, (i, k))
+                    #                             fillcolor := edge_color[(i, k)]
+                    #                         else
+                    #                             push!(missing_keys, (i, k))
+                    #                             fillcolor := :gray
+                    #                         end
+                    #                     else
+                    #                         fillcolor := edge_color
+                    #                     end
+                    #                     sankey_x, sankey_y
+                    #                 end
+                    #                 isempty(missing_keys) || @warn "The following missing keys in the edge_color dictionary defaulted to gray" missing_keys
                 end
             end
 
-    #         if label_position !== :legend
-    #             xlab, orientation = if label_position in (:node, :top, :bottom)
-    #                 olab = if label_position === :top
-    #                     :bottom
-    #                 elseif label_position === :bottom
-    #                     :top
-    #                 else
-    #                     :center
-    #                 end
-    #                 x[i], olab
-    #             elseif label_position === :right ||
-    #                     (label_position === :inside && x[i] < maximum(x))
-    #                 x[i] + 0.15, :left
-    #             elseif label_position === :left ||
-    #                     (label_position === :inside && x[i] == maximum(x))
-    #                 x[i] - 0.15, :right
-    #             else
-    #                 error("label_position :$label_position not supported")
-    #             end
-    #             ylab = if label_position === :top
-    #                 y[i] + h + 0.02
-    #             elseif label_position === :bottom
-    #                 y[i] - h - 0.0025 * label_size
-    #             else
-    #                 y[i]
-    #             end
-    #             push!(xlabs, xlab)
-    #             push!(ylabs, ylab)
-    #             push!(lab_orientations, orientation)
-    #         end
+            #         if label_position !== :legend
+            #             xlab, orientation = if label_position in (:node, :top, :bottom)
+            #                 olab = if label_position === :top
+            #                     :bottom
+            #                 elseif label_position === :bottom
+            #                     :top
+            #                 else
+            #                     :center
+            #                 end
+            #                 x[i], olab
+            #             elseif label_position === :right ||
+            #                     (label_position === :inside && x[i] < maximum(x))
+            #                 x[i] + 0.15, :left
+            #             elseif label_position === :left ||
+            #                     (label_position === :inside && x[i] == maximum(x))
+            #                 x[i] - 0.15, :right
+            #             else
+            #                 error("label_position :$label_position not supported")
+            #             end
+            #             ylab = if label_position === :top
+            #                 y[i] + h + 0.02
+            #             elseif label_position === :bottom
+            #                 y[i] - h - 0.0025 * label_size
+            #             else
+            #                 y[i]
+            #             end
+            #             push!(xlabs, xlab)
+            #             push!(ylabs, ylab)
+            #             push!(lab_orientations, orientation)
+            #         end
         end
     end
 
-    text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text = labels, align = (:center, :top), fontsize = s.fontsize[])
+    text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text=labels, align=(:center, :top), fontsize=s.fontsize[])
 
     # if label_position !== :legend
     #     @series begin
@@ -246,13 +246,13 @@ function sankey_graph(src::Vector, dst::Vector, w)
     # process src and dst to avoid missing nodes
 
     # Parse src and dst to match all ids in unique_nodes
-    parser_dict = Dict(unique_nodes[id]=>id for id = 1:length(unique_nodes))
-    
+    parser_dict = Dict(unique_nodes[id] => id for id = 1:length(unique_nodes))
+
     src = [parser_dict[src_val] for src_val in src]
     dst = [parser_dict[dst_val] for dst_val in dst]
 
     # verify length of vectors
-    @assert length(src)==length(dst)==length(w)  "Mismatch in the lengths of input parameters"
+    @assert length(src) == length(dst) == length(w) "Mismatch in the lengths of input parameters"
 
     # initialize graph
     g = MetaDiGraph(n_nodes)
@@ -290,9 +290,9 @@ get_link_color(t::SourceColor, i, j, k, nodecolor) = (get_node_color(nodecolor, 
 sankey_names(g, names) = names
 sankey_names(g, ::Nothing) = string.("Node", eachindex(vertices(g)))
 
-function sankey_layout!(g, force_layer, force_order)
+function sankey_layout!(g, forcelayer, forceorder)
     xs, ys, paths = solve_positions(
-        Zarate(), g, force_layer=force_layer, force_order=force_order
+        Zarate(), g, force_layer=forcelayer, force_order=forceorder
     )
     mask = falses(length(xs))
     for (edge, path) in paths
@@ -313,13 +313,39 @@ function sankey_layout!(g, force_layer, force_order)
             rem_edge!(g, edge)
         end
     end
+
+    if !isempty(forceorder)
+        reorder_nodes!(ys, xs, mask, forceorder)
+    end
+
     return xs, ys, mask
+end
+
+# ys as first arg because it's mutated?
+function reorder_nodes!(ys, xs, mask, forceorder)
+    for (node1, node2) in forceorder
+        idx1 = findfirst(i -> !mask[i] && i == node1, eachindex(xs))
+        idx2 = findfirst(i -> !mask[i] && i == node2, eachindex(xs))
+
+        if idx1 !== nothing && idx2 !== nothing
+            x1, x2 = xs[idx1], xs[idx2]
+            if x1 != x2
+                @warn "`forceorder = [$node1 => $node2]` failed; nodes must be in the same layer."
+                continue
+            elseif ys[idx1] < ys[idx2]
+                @warn "`forceorder = [$node1 => $node2]` failed; nodes are already in this order."
+                continue
+            end
+            ys[idx1], ys[idx2] = ys[idx2], ys[idx1]
+        end
+    end
+    return nothing
 end
 
 function vertex_weight(g, v)
     max(
-        sum0(x->get_prop(g, x, :weight), Iterators.filter(e -> src(e) == v, edges(g))),
-        sum0(x->get_prop(g, x, :weight), Iterators.filter(e -> dst(e) == v, edges(g))),
+        sum0(x -> get_prop(g, x, :weight), Iterators.filter(e -> src(e) == v, edges(g))),
+        sum0(x -> get_prop(g, x, :weight), Iterators.filter(e -> dst(e) == v, edges(g))),
     )
 end
 sum0(f, x) = isempty(x) ? 0.0 : sum(f, x)
@@ -396,29 +422,29 @@ function linkpoly(plt, scene, xs, ys, lwidth)
 
     lift(scene.camera.projectionview, scene.viewport) do _, _
 
-        nparts = length(xs)-1
+        nparts = length(xs) - 1
         # points = Vector{Point2f}(undef, 2 * n * nparts)
         points = fill(Point2f(1, 1), 2 * n * nparts)
 
         for (ipart, (x0, x1, y0, y1)) in enumerate(zip(
-                @view(xs[1:end-1]),
-                @view(xs[2:end]),
-                @view(ys[1:end-1]),
-                @view(ys[2:end]),
-            ))
+            @view(xs[1:end-1]),
+            @view(xs[2:end]),
+            @view(ys[1:end-1]),
+            @view(ys[2:end]),
+        ))
 
             corners = Makie.plot_to_screen(
                 plt,
                 Point2f[
-                    (x0, y0 - lwidth/2),
-                    (x1, y1 - lwidth/2),
-                    (x1, y1 + lwidth/2),
-                    (x0, y0 + lwidth/2),
+                    (x0, y0 - lwidth / 2),
+                    (x1, y1 - lwidth / 2),
+                    (x1, y1 + lwidth / 2),
+                    (x0, y0 + lwidth / 2),
                 ],
             )
 
             start = 0.5 * (corners[1] + corners[4])
-            stop =  0.5 * (corners[2] + corners[3])
+            stop = 0.5 * (corners[2] + corners[3])
             thickness = corners[4][2] - corners[1][2]
             width = stop[1] - start[1]
             height = stop[2] - start[2]
@@ -427,7 +453,7 @@ function linkpoly(plt, scene, xs, ys, lwidth)
             x0pix = start[1]
             x1pix = stop[1]
 
-            for (i, x) in enumerate(range(x0pix, x1pix, length = n))
+            for (i, x) in enumerate(range(x0pix, x1pix, length=n))
 
                 y = height * (1 - cos(pi * (x - x0pix) / width)) / 2 + start[2]
                 deriv = pi * height * sin((pi * (x - x0pix)) / width) / (2 * width)
@@ -439,11 +465,11 @@ function linkpoly(plt, scene, xs, ys, lwidth)
                 _xy = Point2f(x, y)
 
                 if nparts > 1
-                    points[i + (ipart-1) * n] = _xy - ortho * thickness/2
-                    points[end - (ipart-1) * n - i + 1] = _xy + ortho * thickness/2
+                    points[i+(ipart-1)*n] = _xy - ortho * thickness / 2
+                    points[end-(ipart-1)*n-i+1] = _xy + ortho * thickness / 2
                 else
-                    points[i + (ipart-1) * n] = _xy - ortho * thickness/2
-                    points[end - (ipart-1) * n - i + 1] = _xy + ortho * thickness/2
+                    points[i+(ipart-1)*n] = _xy - ortho * thickness / 2
+                    points[end-(ipart-1)*n-i+1] = _xy + ortho * thickness / 2
                 end
             end
         end
@@ -453,7 +479,7 @@ function linkpoly(plt, scene, xs, ys, lwidth)
 end
 
 Makie.data_limits(s::Sankey) = reduce(union, [Makie.data_limits(p) for p in s.plots if !(haskey(p, :space) && p.space[] === :pixel)])
-Makie.boundingbox(s::Sankey, space::Symbol = :data) = Makie.apply_transform_and_model(s, Makie.data_limits(s))
+Makie.boundingbox(s::Sankey, space::Symbol=:data) = Makie.apply_transform_and_model(s, Makie.data_limits(s))
 
 
 end

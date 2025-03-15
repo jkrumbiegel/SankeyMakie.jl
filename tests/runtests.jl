@@ -47,8 +47,9 @@ sankey!(
     nodecolor = rand(RGBf, length(labels)),
     linkcolor = SankeyMakie.TargetColor(0.2),
     fontsize = 20,
+    forceorder = [15 => 9],
 )
-xlims!(0.6, 4.6)
+#xlims!(0.6, 4.6)
 ylims!(-0.1, 1.15)
 #hidedecorations!(ax)
 #hidespines!(ax)

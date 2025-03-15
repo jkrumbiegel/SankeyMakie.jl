@@ -36,6 +36,7 @@ export sankey, sankey!
         linkcolor=(:pink, 0.2),
         forceorder=Pair{Int,Int}[],
         forcelayer=Pair{Int,Int}[],
+        reverseorder=false,
     )
 end
 #     node_labels=nothing,
@@ -59,7 +60,7 @@ function Makie.plot!(s::Sankey)
     scene = Makie.parent_scene(s)
     wbox = 0.03
 
-    x, y, mask = sankey_layout!(g, s.forcelayer[], s.forceorder[])
+    x, y, mask = sankey_layout!(g, s.forcelayer[], s.forceorder[], s.reverseorder[])
     perm = sortperm(y, rev=true)
 
     vw = vertex_weight.(Ref(g), vertices(g))
@@ -290,7 +291,7 @@ get_link_color(t::SourceColor, i, j, k, nodecolor) = (get_node_color(nodecolor, 
 sankey_names(g, names) = names
 sankey_names(g, ::Nothing) = string.("Node", eachindex(vertices(g)))
 
-function sankey_layout!(g, forcelayer, forceorder)
+function sankey_layout!(g, forcelayer, forceorder, reverseorder)
     xs, ys, paths = solve_positions(
         Zarate(), g, force_layer=forcelayer, force_order=forceorder
     )
@@ -318,6 +319,11 @@ function sankey_layout!(g, forcelayer, forceorder)
         reorder_nodes!(ys, xs, mask, forceorder)
     end
 
+    if reverseorder
+        layers = nodes_by_layers(xs, mask)
+        reverse_nodes!(ys, layers)
+    end
+
     return xs, ys, mask
 end
 
@@ -340,6 +346,33 @@ function reorder_nodes!(ys, xs, mask, forceorder)
         end
     end
     return nothing
+end
+
+function reverse_nodes!(ys, layers)
+    for (_, indices) in layers
+        if length(indices) < 2
+            continue
+        end
+        sorted_indices = sort(indices, by=i -> ys[i])
+        y_positions = ys[sorted_indices]
+        for (i, idx) in enumerate(sorted_indices)
+            ys[idx] = y_positions[end-i+1]
+        end
+    end
+    return nothing
+end
+
+function nodes_by_layers(xs, mask)
+    layers = Dict{Float64,Vector{Int}}()
+    for (i, x) in enumerate(xs)
+        if !mask[i]
+            if !haskey(layers, x)
+                layers[x] = Int[]
+            end
+            push!(layers[x], i)
+        end
+    end
+    return layers
 end
 
 function vertex_weight(g, v)

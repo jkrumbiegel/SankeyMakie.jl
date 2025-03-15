@@ -35,8 +35,6 @@ export sankey, sankey!
         nodecolor=:gray30,
         linkcolor=(:pink, 0.2),
         forceorder=Pair{Int,Int}[],
-        forcelayer=Pair{Int,Int}[],
-        reverseorder=false,
     )
 end
 #     node_labels=nothing,
@@ -60,7 +58,9 @@ function Makie.plot!(s::Sankey)
     scene = Makie.parent_scene(s)
     wbox = 0.03
 
-    x, y, mask = sankey_layout!(g, s.forcelayer[], s.forceorder[], s.reverseorder[])
+    forcelayer = Pair{Int,Int}[]
+
+    x, y, mask = sankey_layout!(g, forcelayer, s.forceorder[])
     perm = sortperm(y, rev=true)
 
     vw = vertex_weight.(Ref(g), vertices(g))
@@ -291,10 +291,36 @@ get_link_color(t::SourceColor, i, j, k, nodecolor) = (get_node_color(nodecolor, 
 sankey_names(g, names) = names
 sankey_names(g, ::Nothing) = string.("Node", eachindex(vertices(g)))
 
-function sankey_layout!(g, forcelayer, forceorder, reverseorder)
+function sankey_layout!(g, forcelayer, forceorder::Vector{Pair{Int,Int}})
     xs, ys, paths = solve_positions(
         Zarate(), g, force_layer=forcelayer, force_order=forceorder
     )
+    
+    mask = insert_masked_nodes!(g, xs, ys, paths)
+
+    if !isempty(forceorder)
+        reorder_nodes!(ys, xs, mask, forceorder)
+    end
+
+    return xs, ys, mask
+end
+
+function sankey_layout!(g, forcelayer, forceorder::Symbol)
+    xs, ys, paths = solve_positions(
+        Zarate(), g, force_layer=forcelayer, force_order=Pair{Int,Int}[]
+    )
+
+    mask = insert_masked_nodes!(g, xs, ys, paths)
+    
+    if forceorder == :reverse
+        layers = nodes_by_layers(xs, mask)
+        reverse_nodes!(ys, layers)
+    end
+
+    return xs, ys, mask
+end
+
+function insert_masked_nodes!(g, xs, ys, paths)
     mask = falses(length(xs))
     for (edge, path) in paths
         s = edge.src
@@ -314,17 +340,7 @@ function sankey_layout!(g, forcelayer, forceorder, reverseorder)
             rem_edge!(g, edge)
         end
     end
-
-    if !isempty(forceorder)
-        reorder_nodes!(ys, xs, mask, forceorder)
-    end
-    
-    if reverseorder
-        layers = nodes_by_layers(xs, mask)
-        reverse_nodes!(ys, layers)
-    end
-
-    return xs, ys, mask
+    return mask
 end
 
 # ys as first arg because it's mutated?

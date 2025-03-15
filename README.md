@@ -43,7 +43,6 @@ labels = [
     "Groceries",
 ]
 
-
 fig, ax, plt = sankey(
     connections,
     nodelabels = labels,
@@ -51,7 +50,6 @@ fig, ax, plt = sankey(
     linkcolor = SankeyMakie.TargetColor(0.2),
     fontsize = 20,
     forceorder = [6 => 1], # Salary 2 before Salary
-    reverseorder = true, # Reverse order within each layer
     figure = (; size = (1000, 500)),
 )
 
@@ -59,6 +57,29 @@ hidedecorations!(ax)
 hidespines!(ax)
 
 save("sankey.svg", fig)
+
+fig
 ```
 
 ![sankey example](sankey.svg)
+
+It is also possible to reverse the order of all nodes within each layer by specifying `forceorder = :reverse`.
+
+```julia
+fig, ax, plt = sankey(
+    connections,
+    nodelabels = labels,
+    nodecolor = rand(RGBf, length(labels)),
+    linkcolor = SankeyMakie.TargetColor(0.2),
+    fontsize = 20,
+    forceorder = :reverse,
+    figure = (; size = (1000, 500)),
+)
+
+hidedecorations!(ax)
+hidespines!(ax)
+
+save("sankey_reverse.svg", fig)
+```
+
+![sankey reverse example](sankey_reverse.svg)

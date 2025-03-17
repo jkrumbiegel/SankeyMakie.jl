@@ -46,7 +46,7 @@ function reftest(f::Function, name::String, update::Bool = get(ENV, "UPDATE_REFI
     mkpath(path)
     refpath = joinpath(path, name * " ref.png")
     recpath = joinpath(path, name * " rec.png")
-
+    
     save(recpath, fig)
 
     @testset "$name" begin

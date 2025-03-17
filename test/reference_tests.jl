@@ -43,3 +43,27 @@ reftest("basic sankey") do
     hidespines!(ax); hidedecorations!(ax)
     return fig
 end
+
+reftest("sankey standard `forceorder`") do
+    fig, ax, plt = sankey(
+        connections,
+        nodelabels = labels,
+        nodecolor = Makie.to_colormap(:tab20)[1:length(labels)],
+        linkcolor = SankeyMakie.TargetColor(0.2),
+        forceorder = [6 => 1],
+    )
+    hidespines!(ax); hidedecorations!(ax)
+    return fig
+end
+
+reftest("sankey `forceorder = :reverse`") do
+    fig, ax, plt = sankey(
+        connections,
+        nodelabels = labels,
+        nodecolor = Makie.to_colormap(:tab20)[1:length(labels)],
+        linkcolor = SankeyMakie.TargetColor(0.2),
+        forceorder = :reverse,
+    )
+    hidespines!(ax); hidedecorations!(ax)
+    return fig
+end

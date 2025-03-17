@@ -39,7 +39,7 @@ reftest("basic sankey") do
     fig, ax, plt = sankey(
         connections,
         nodelabels = labels,
-        nodecolor = rand(RGBf, length(labels)),
+        nodecolor = Makie.to_colormap(:tab20)[1:length(labels)],
         linkcolor = SankeyMakie.TargetColor(0.2),
     )
     hidespines!(ax); hidedecorations!(ax)

@@ -34,6 +34,7 @@ export sankey, sankey!
         nodelabels = nothing,
         nodecolor = :gray30,
         linkcolor = (:pink, 0.2),
+        forceorder = Pair{Int,Int}[],
     )
 end
 #     node_labels=nothing,
@@ -58,8 +59,8 @@ function Makie.plot!(s::Sankey)
     wbox = 0.03
 
     force_layer = Pair{Int,Int}[]
-    force_order = Pair{Int,Int}[]
-    x, y, mask = sankey_layout!(g, force_layer, force_order)
+
+    x, y, mask = sankey_layout!(g, force_layer, s.forceorder[])
     perm = sortperm(y, rev=true)
 
     vw = vertex_weight.(Ref(g), vertices(g))
@@ -290,10 +291,36 @@ get_link_color(t::SourceColor, i, j, k, nodecolor) = (get_node_color(nodecolor, 
 sankey_names(g, names) = names
 sankey_names(g, ::Nothing) = string.("Node", eachindex(vertices(g)))
 
-function sankey_layout!(g, force_layer, force_order)
+function sankey_layout!(g, forcelayer, forceorder::Vector{Pair{Int,Int}})
     xs, ys, paths = solve_positions(
-        Zarate(), g, force_layer=force_layer, force_order=force_order
+        Zarate(), g, force_layer=forcelayer, force_order=forceorder
     )
+    
+    mask = insert_masked_nodes!(g, xs, ys, paths)
+
+    if !isempty(forceorder)
+        reorder_nodes!(ys, xs, mask, forceorder)
+    end
+
+    return xs, ys, mask
+end
+
+function sankey_layout!(g, forcelayer, forceorder::Symbol)
+    xs, ys, paths = solve_positions(
+        Zarate(), g, force_layer=forcelayer, force_order=Pair{Int,Int}[]
+    )
+
+    mask = insert_masked_nodes!(g, xs, ys, paths)
+    
+    if forceorder == :reverse
+        layers = nodes_by_layers(xs, mask)
+        reverse_nodes!(ys, layers)
+    end
+
+    return xs, ys, mask
+end
+
+function insert_masked_nodes!(g, xs, ys, paths)
     mask = falses(length(xs))
     for (edge, path) in paths
         s = edge.src
@@ -313,7 +340,55 @@ function sankey_layout!(g, force_layer, force_order)
             rem_edge!(g, edge)
         end
     end
-    return xs, ys, mask
+    return mask
+end
+
+# ys as first arg because it's mutated?
+function reorder_nodes!(ys, xs, mask, forceorder)
+    for (node1, node2) in forceorder
+        idx1 = findfirst(i -> !mask[i] && i == node1, eachindex(xs))
+        idx2 = findfirst(i -> !mask[i] && i == node2, eachindex(xs))
+
+        if idx1 !== nothing && idx2 !== nothing
+            x1, x2 = xs[idx1], xs[idx2]
+            if x1 != x2
+                @warn "`forceorder = [$node1 => $node2]` failed; nodes must be in the same layer."
+                continue
+            elseif ys[idx1] < ys[idx2]
+                @warn "`forceorder = [$node1 => $node2]` failed; nodes are already in this order."
+                continue
+            end
+            ys[idx1], ys[idx2] = ys[idx2], ys[idx1]
+        end
+    end
+    return nothing
+end
+
+function reverse_nodes!(ys, layers)
+    for (_, indices) in layers
+        if length(indices) < 2
+            continue
+        end
+        sorted_indices = sort(indices, by=i -> ys[i])
+        y_positions = ys[sorted_indices]
+        for (i, idx) in enumerate(sorted_indices)
+            ys[idx] = y_positions[end-i+1]
+        end
+    end
+    return nothing
+end
+
+function nodes_by_layers(xs, mask)
+    layers = Dict{Float64,Vector{Int}}()
+    for (i, x) in enumerate(xs)
+        if !mask[i]
+            if !haskey(layers, x)
+                layers[x] = Int[]
+            end
+            push!(layers[x], i)
+        end
+    end
+    return layers
 end
 
 function vertex_weight(g, v)

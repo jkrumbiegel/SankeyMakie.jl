@@ -14,7 +14,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Graphs = "1.5"
 LayeredLayouts = "0.2.4"
 MetaGraphs = "0.7"
-julia = "1.5"
+julia = "1.10"
 
 [extras]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

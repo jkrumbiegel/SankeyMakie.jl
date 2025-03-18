@@ -67,3 +67,15 @@ reftest("sankey `forceorder = :reverse`") do
     hidespines!(ax); hidedecorations!(ax)
     return fig
 end
+
+reftest("larger fontsize") do
+    fig, ax, plt = sankey(
+        connections,
+        nodelabels = labels,
+        nodecolor = Makie.to_colormap(:tab20)[1:length(labels)],
+        linkcolor = SankeyMakie.TargetColor(0.2),
+        fontsize = 24,
+    )
+    hidespines!(ax); hidedecorations!(ax)
+    return fig
+end

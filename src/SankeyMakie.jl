@@ -212,7 +212,7 @@ function Makie.plot!(s::Sankey)
         end
     end
 
-    text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text = labels, align = (:center, :top))
+    text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text = labels, align = (:center, :top), fontsize = s.fontsize[])
 
     # if label_position !== :legend
     #     @series begin

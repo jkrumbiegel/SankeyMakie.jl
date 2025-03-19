@@ -33,7 +33,7 @@ export sankey, sankey!
         fontsize = theme(scene, :fontsize),
         nodelabels = nothing,
         nodecolor = :gray30,
-        linkcolor = (:pink, 0.2),
+        linkcolor = (:gray30, 0.2),
         forceorder = Pair{Int,Int}[],
     )
 end
@@ -86,7 +86,10 @@ function Makie.plot!(s::Sankey)
     for (i, v) in enumerate(vertices(g))
         h = heights[i]
 
-        if !(mask[i])
+        if mask[i]
+            # these are just to make the limits correctly include masked nodes
+            poly!(s, BBox(x[i]-wbox, x[i]+wbox, y[i]-h, y[i]+h), visible = false)
+        else
             poly!(s, BBox(x[i]-wbox, x[i]+wbox, y[i]-h, y[i]+h), color = get_node_color(s.nodecolor[], i))
 
             for (j, w) in enumerate(vertices(g))
@@ -128,8 +131,19 @@ function Makie.plot!(s::Sankey)
                     sankey_x = range(x[i]+wbox, x[k]-wbox, length = length(sankey_y))
 
                     pol = linkpoly(s, scene, xvals, yvals .- h_edge, 2h_edge)
-
-                    poly!(s, pol, color = get_link_color(s.linkcolor[], i, j, linkindexdict[(i, j)], s.nodecolor[]), space = :pixel)
+                    
+                    poly!(
+                        s,
+                        pol,
+                        color = get_link_color(
+                            s.linkcolor[],
+                            i,
+                            k,
+                            linkindexdict[(i, k)],
+                            s.nodecolor[]
+                        ),
+                        space = :pixel
+                    )
                     # band!(s, sankey_x, sankey_y.-2h_edge, sankey_y, color = (:black, 0.1))
 
     #                 missing_keys = Tuple{Int64, Int64}[]

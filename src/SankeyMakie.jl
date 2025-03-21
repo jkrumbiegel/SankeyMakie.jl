@@ -7,28 +7,28 @@ using Makie
 
 export sankey, sankey!
 
-# """
-#     sankey(src, dst, weights; kwargs..., plotattributes...)
-#     sankey(g::AbstractMetaGraph; kwargs..., plotattributes...)
+"""
+    sankey(connections; kwargs...)
 
-# Plot a sankey diagram.
+Plots a sankey diagram from the `(source, destination, weight)` entries in `connections`.
 
-# In addition to [Plots.jl attributes](http://docs.juliaplots.org/latest/attributes/) the following keyword arguments are supported.
+Specific attributes to `sankey` are:
+- `compact = true`: Reduces the amount of vertical space between nodes in each layer.
+- `fontsize = theme(scene, :fontsize)`: Sets the font size of the node labels.
+- `nodelabels = nothing`: Places labels under the nodes with the corresponding indices.
+- `linkcolor = (:gray30, 0.2)`: Sets a color for each link or all links if only one color is provided.
+- `forceorder = Pair{Int,Int}[]`: Changes the order of nodes in the same layer(s). Can be `[6 => 1]` (node 6 before 1), or `:reverse` (reverse within all layers).
 
-# | Keyword argument | Default value | Options |
-# |---|---|----|
-# | `node_labels` | `nothing` | `AbstractVector{<:String}` |
-# | `node_colors` | `nothing` | Vector of [color specifications supported by Plots.jl](http://docs.juliaplots.org/latest/colors/) or [color palette](http://docs.juliaplots.org/latest/generated/colorschemes/#ColorPalette) |
-# | `edge_color` | `:gray` | Plots.jl supported [color](http://docs.juliaplots.org/latest/colors/), color selection from connected nodes with `:src`, `:dst`, `:gradient`, or an `AbstractDict{Tuple{Int, Int}, Any}` where `edge_color[(src, dst)]` maps to a color |
-# | `label_position` | `:inside` | `:legend`, `:node`, `:left`, `:right`, `:top` or `:bottom` |
-# | `label_size` | `8` | `Int` |
-# | `compact` | `false` | `Bool` |
-# | `force_layer` | `Vector{Pair{Int,Int}}()` | Vectors of Int pairs specifying the layer for every node e.g. `[4=>2]` to force node 4 in layer 3 |
-# | `force_order` | `Vector{Pair{Int,Int}}()` | Vectors of Int pairs specifying the node ordering in each layer e.g. `[1=>2]` to specify node 1 preceeds node 2 in the same layer |"""
+## Example
 
+```julia
+using CairoMakie, SankeyMakie
+connections = [(1, 2, 10), (1, 3, 15), (3, 4, 5)]
+sankey(connections; nodelabels=["A", "B", "C", "D"])
+```
+"""
 @recipe(Sankey) do scene
     Attributes(
-        labelposition=:inside,
         compact = true,
         fontsize = theme(scene, :fontsize),
         nodelabels = nothing,
@@ -37,23 +37,11 @@ export sankey, sankey!
         forceorder = Pair{Int,Int}[],
     )
 end
-#     node_labels=nothing,
-#     node_colors=nothing,
-#     edge_color=:gray,
-#     
-#     label_size=8,
-#     compact=false,
-#     force_layer::Vector{Pair{Int,Int}}=Vector{Pair{Int,Int}}(),
-#     force_order::Vector{Pair{Int,Int}}=Vector{Pair{Int,Int}}(),
-# )
 
 function Makie.plot!(s::Sankey)
     g = sankey_graph(s[1][])
     linkindexdict = Dict(tuple.(first.(s[1][]), getindex.(s[1][], 2)) .=> eachindex(s[1][]))
     labels = sankey_names(g, s.nodelabels[])
-    # if node_colors === nothing
-    #     node_colors = palette(get(plotattributes, :color_palette, :default))
-    # end
 
     scene = Makie.parent_scene(s)
     wbox = 0.03
@@ -74,14 +62,6 @@ function Makie.plot!(s::Sankey)
     dst_offsets = get_dst_offsets(g, perm) ./ m
 
     heights = vw ./ 2m
-
-    # if label_position ∉ (:inside, :left, :right, :top, :bottom, :node, :legend)
-    #     error("label_position :$label_position not supported")
-    # elseif label_position !== :legend
-    #     xlabs = Float64[]
-    #     ylabs = Float64[]
-    #     lab_orientations = Symbol[]
-    # end
 
     for (i, v) in enumerate(vertices(g))
         h = heights[i]
@@ -106,7 +86,6 @@ function Makie.plot!(s::Sankey)
                     l = i
                     while mask[k]
                         y_dst = y[k] + vw[k] / (2m) - dst_offsets[k, l]
-                        # x_coords = range(0, 1, length=length(x_start:0.01:x[k]))
                         x_coords = range(0, 1, length=3)
                         y_coords =
                             remap(1 ./ (1 .+ exp.(6 .* (1 .- 2 .* x_coords))), y_src, y_dst)
@@ -125,7 +104,6 @@ function Makie.plot!(s::Sankey)
                     y_dst = y[k] + vw[k] / (2m) - dst_offsets[k, l]
                     push!(yvals, y_dst)
                     x_coords = range(0, 1, length=3)
-                    # x_coords = range(0, 1, length=length(x_start:0.01:x[k]-wbox))
                     y_coords = remap(1 ./ (1 .+ exp.(6 .* (1 .- 2 .* x_coords))), y_src, y_dst)
                     append!(sankey_y, y_coords)
                     sankey_x = range(x[i]+wbox, x[k]-wbox, length = length(sankey_y))
@@ -144,101 +122,12 @@ function Makie.plot!(s::Sankey)
                         ),
                         space = :pixel
                     )
-                    # band!(s, sankey_x, sankey_y.-2h_edge, sankey_y, color = (:black, 0.1))
-
-    #                 missing_keys = Tuple{Int64, Int64}[]
-    #                 @series begin
-    #                     seriestype := :path
-    #                     primary := false
-    #                     linecolor := nothing
-    #                     linewidth := false
-    #                     fillrange := sankey_y .- 2h_edge
-    #                     fillalpha --> 0.5
-    #                     if edge_color === :gradient
-    #                         fillcolor := getindex(
-    #                             cgrad(node_colors[mod1.([i, k], end)]),
-    #                             range(0, 1, length=length(sankey_x)),
-    #                         )
-    #                     elseif edge_color === :src
-    #                         fillcolor := node_colors[mod1(i, end)]
-    #                     elseif edge_color === :dst
-    #                         fillcolor := node_colors[mod1(k, end)]
-    #                     elseif typeof(edge_color) <: AbstractDict{Tuple{Int, Int}}
-    #                         if haskey(edge_color, (i, k))
-    #                             fillcolor := edge_color[(i, k)]
-    #                         else
-    #                             push!(missing_keys, (i, k))
-    #                             fillcolor := :gray
-    #                         end
-    #                     else
-    #                         fillcolor := edge_color
-    #                     end
-    #                     sankey_x, sankey_y
-    #                 end
-    #                 isempty(missing_keys) || @warn "The following missing keys in the edge_color dictionary defaulted to gray" missing_keys
                 end
             end
-
-    #         if label_position !== :legend
-    #             xlab, orientation = if label_position in (:node, :top, :bottom)
-    #                 olab = if label_position === :top
-    #                     :bottom
-    #                 elseif label_position === :bottom
-    #                     :top
-    #                 else
-    #                     :center
-    #                 end
-    #                 x[i], olab
-    #             elseif label_position === :right ||
-    #                     (label_position === :inside && x[i] < maximum(x))
-    #                 x[i] + 0.15, :left
-    #             elseif label_position === :left ||
-    #                     (label_position === :inside && x[i] == maximum(x))
-    #                 x[i] - 0.15, :right
-    #             else
-    #                 error("label_position :$label_position not supported")
-    #             end
-    #             ylab = if label_position === :top
-    #                 y[i] + h + 0.02
-    #             elseif label_position === :bottom
-    #                 y[i] - h - 0.0025 * label_size
-    #             else
-    #                 y[i]
-    #             end
-    #             push!(xlabs, xlab)
-    #             push!(ylabs, ylab)
-    #             push!(lab_orientations, orientation)
-    #         end
         end
     end
 
     text!(s, x[.!mask], y[.!mask] .- heights[.!mask], text = labels, align = (:center, :top), fontsize = s.fontsize[])
-
-    # if label_position !== :legend
-    #     @series begin
-    #         primary := :false
-    #         seriestype := :scatter
-    #         markeralpha := 0
-    #         series_annotations := text.(names, lab_orientations, label_size)
-    #         xlabs, ylabs
-    #     end
-
-    #     # extend axes for labels
-    #     if label_position in (:left, :right)
-    #         x_extra = label_position === :left ? minimum(xlabs) - 0.4 : maximum(xlabs) + 0.5
-    #         @series begin
-    #             primary := false
-    #             seriestype := :scatter
-    #             markeralpha := 0
-    #             [x_extra], [ylabs[1]]
-    #         end
-    #     end
-    # end
-
-    # primary := false
-    # framestyle --> :none
-    # legend --> label_position === :legend ? :outertopright : false
-    # ()
 
     return s
 end
@@ -486,7 +375,6 @@ function linkpoly(plt, scene, xs, ys, lwidth)
     lift(scene.camera.projectionview, scene.viewport) do _, _
 
         nparts = length(xs)-1
-        # points = Vector{Point2f}(undef, 2 * n * nparts)
         points = fill(Point2f(1, 1), 2 * n * nparts)
 
         for (ipart, (x0, x1, y0, y1)) in enumerate(zip(
@@ -543,6 +431,5 @@ end
 
 Makie.data_limits(s::Sankey) = reduce(union, [Makie.data_limits(p) for p in s.plots if !(haskey(p, :space) && p.space[] === :pixel)])
 Makie.boundingbox(s::Sankey, space::Symbol = :data) = Makie.apply_transform_and_model(s, Makie.data_limits(s))
-
 
 end

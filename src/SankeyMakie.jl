@@ -10,7 +10,7 @@ export sankey, sankey!
 """
     sankey(connections; kwargs...)
 
-Plots a sankey diagram from the `(source, destination, weight)` entries in `connections`.
+Plots a sankey diagram from the `(source, target, weight)` entries in `connections`.
 
 Specific attributes to `sankey` are:
 - `compact = true`: Reduces the amount of vertical space between nodes in each layer.

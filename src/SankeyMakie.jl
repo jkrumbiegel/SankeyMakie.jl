@@ -13,11 +13,11 @@ export sankey, sankey!
 Plots a sankey diagram from the `(source, destination, weight)` entries in `connections`.
 
 Specific attributes to `sankey` are:
-- `compact = true`: Spaces whether the nodes are placed .
+- `compact = true`: Reduces the amount of vertical space between nodes in each layer.
 - `fontsize = theme(scene, :fontsize)`: Sets the font size of the node labels.
 - `nodelabels = nothing`: Places labels under the nodes with the corresponding indices.
 - `linkcolor = (:gray30, 0.2)`: Sets a color for each link or all links if only one color is provided.
-- `forceorder = Pair{Int,Int}[]`: Overrides the layout algorithm. Can be `[6 => 1]` (node 6 before 1), or `:reverse` (reverse all).
+- `forceorder = Pair{Int,Int}[]`: Changes the order of nodes in the same layer(s). Can be `[6 => 1]` (node 6 before 1), or `:reverse` (reverse within all layers).
 
 ## Example
 

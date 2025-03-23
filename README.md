@@ -1,3 +1,12 @@
+<div align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" 
+        srcset="docs/src/assets/logo_with_text_dark.svg" >
+      <img alt="SankeyMakie.jl logo" 
+        src="docs/src/assets/logo_with_text.svg" height="100">
+    </picture>
+</div>
+
 A Makie port of [https://github.com/daschw/SankeyPlots.jl](https://github.com/daschw/SankeyPlots.jl)
 
 ## Example

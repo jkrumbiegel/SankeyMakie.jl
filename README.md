@@ -3,7 +3,7 @@
       <source media="(prefers-color-scheme: dark)" 
         srcset="docs/src/assets/logo_with_text_dark.svg" >
       <img alt="SankeyMakie.jl logo" 
-        src="docs/src/assets/logo_with_text.svg" height="50">
+        src="docs/src/assets/logo_with_text.svg" height="80">
     </picture>
 </div>
 
